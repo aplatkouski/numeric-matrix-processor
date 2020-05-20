@@ -34,11 +34,19 @@ class Matrix:
         return f"Matrix {self.rows},{self.columns}({self.elements})"
 
     def __add__(self, other: Any) -> Union['Matrix', None]:
+        if not isinstance(other, self.__class__):
+            raise NotImplemented
         if self.rows != other.rows or self.columns != other.columns:
             # this is requirement of task
             print("ERROR")
             return None
         elements: MatrixElements = list(map(sum, zip(self.elements, other.elements)))
+        return Matrix(self.rows, self.columns, elements=elements)
+
+    def __mul__(self, other: Any) -> 'Matrix':
+        if not isinstance(other, int):
+            raise NotImplemented
+        elements: MatrixElements = list(map(lambda x: x * other, self.elements))
         return Matrix(self.rows, self.columns, elements=elements)
 
     @staticmethod
@@ -54,6 +62,7 @@ class Matrix:
 
 
 def addition() -> None:
+    # Stage #1: Addition
     matrix_a: Matrix = Matrix()
     matrix_b: Matrix = Matrix()
     matrix = matrix_a + matrix_b
@@ -61,5 +70,11 @@ def addition() -> None:
         print(matrix)
 
 
+def multiplication_by_number() -> None:
+    matrix = Matrix()
+    constant = int(input())
+    print(matrix * constant)
+
+
 if __name__ == '__main__':
-    addition()
+    multiplication_by_number()

@@ -16,3 +16,8 @@ one row of the matrix.
 
 Output the result in the same way but don't print the dimensions of the 
 matrix.
+
+## Stage 2: Objectives
+
+Write a program that reads a matrix and a constant and outputs 
+the result of their multiplication.
