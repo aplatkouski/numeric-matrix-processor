@@ -41,4 +41,14 @@ Write a program that does the following:
  3. Calculates the result and outputs it.
  4. Repeats all these steps until the `"Exit"` option is chosen.
 
+
+## Stage 4: Transpose 
+
+### Objectives
+ 1. Add an option to transpose matrices.
+ 2. If the user chooses this option, program should provide them with 4 
+    types of transposition and ask them to choose one.
+ 3. Then it should read the matrix, transpose it, and output the result.
+
+
 [Essence of linear algebra]: https://www.youtube.com/watch?v=fNk_zzaMoSs&list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab

@@ -1,18 +1,18 @@
 from numbers import Real
 from operator import add, mul
 from sys import exit
-from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 Element = float
 MatrixElements = List[Element]
 MatrixParameters = Tuple[int, int, MatrixElements]
+Choice = Tuple[str, Callable[..., Any]]
+MenuOptions = Dict[str, Choice]
 
 __all__ = ['Matrix']
 
 
 class Matrix:
-    __slots__ = ['rows', 'columns', 'elements']
-
     def __init__(
             self,
             __rows: Optional[int] = None,
@@ -21,7 +21,7 @@ class Matrix:
             elements: Optional[MatrixElements] = None,
             alias: Optional[str] = '',
     ) -> None:
-        if not (__rows and __columns and elements):
+        if __rows is None or __columns is None or elements is None:
             __rows, __columns, elements = self.read_matrix_parameters_from_input(alias)
         if len(elements) != (__rows * __columns):
             raise ValueError
@@ -30,16 +30,12 @@ class Matrix:
         self.elements: MatrixElements = elements
 
     def __str__(self) -> str:
-        c = self.columns
-        return '\n'.join(
-            ' '.join(map(str, self.elements[c * r: c * r + c]))
-            for r in range(self.rows)
-        )
+        return '\n'.join(' '.join(map(str, self.row(r))) for r in range(self.rows))
 
     def __repr__(self) -> str:
         return f"Matrix {self.rows},{self.columns}({self.elements})"
 
-    def __add__(self, other: Any) -> Union['Matrix', None]:
+    def __add__(self, other: Any) -> 'Matrix':
         if not isinstance(other, self.__class__):
             raise NotImplementedError
         if self.rows != other.rows or self.columns != other.columns:
@@ -54,22 +50,6 @@ class Matrix:
             return Matrix(self.rows, self.columns, elements=elements)
         else:
             raise NotImplementedError
-
-    def matrix_mul(self, other: 'Matrix') -> Union['Matrix', NoReturn]:
-        if not isinstance(other, type(self)):
-            raise TypeError
-        if self.columns != other.rows:
-            raise ValueError
-        elements: MatrixElements = list()
-        self_row: MatrixElements
-        other_column: MatrixElements
-        for r in range(self.rows):
-            first_element: int = r * self.columns
-            self_row = self.elements[first_element: first_element + self.columns:]
-            for c in range(other.columns):
-                other_column = other.elements[c:: other.columns]
-                elements.append(sum(mul(*pair) for pair in zip(self_row, other_column)))
-        return Matrix(self.rows, other.columns, elements=elements)
 
     @staticmethod
     def read_matrix_parameters_from_input(
@@ -89,6 +69,84 @@ class Matrix:
             elements.extend(row)
         return rows, columns, elements
 
+    @property
+    def dimensions(self) -> Tuple[int, int]:
+        return self.rows, self.columns
+
+    def row(self, n: int = 0) -> MatrixElements:
+        if 0 <= n < self.rows:
+            return self.elements[n * self.columns: n * self.columns + self.columns:]
+        else:
+            raise IndexError
+
+    def column(self, n: int = 0) -> MatrixElements:
+        if 0 <= n < self.columns:
+            return self.elements[n:: self.columns]
+        else:
+            raise IndexError
+
+    def reinitialize(
+            self,
+            rows: Optional[int] = None,
+            columns: Optional[int] = None,
+            elements: Optional[MatrixElements] = None,
+            alias: Optional[str] = '',
+    ) -> None:
+        if rows is None or columns is None or elements is None:
+            rows, columns, elements = self.read_matrix_parameters_from_input(alias)
+        if len(elements) != (rows * columns):
+            raise ValueError
+        self.rows = rows
+        self.columns = columns
+        self.elements = elements
+
+    def matrix_mul(self, other: 'Matrix') -> 'Matrix':
+        if not isinstance(other, type(self)):
+            raise TypeError
+        if self.columns != other.rows:
+            raise ValueError
+        elements: MatrixElements = list()
+        self_row: MatrixElements
+        other_column: MatrixElements
+        for r in range(self.rows):
+            for c in range(other.columns):
+                elements.append(
+                    sum(mul(*pair) for pair in zip(self.row(r), other.column(c)))
+                )
+        return Matrix(self.rows, other.columns, elements=elements)
+
+    def transpose_at_main_diagonal(self) -> None:
+        elements: MatrixElements = list()
+        for c in range(self.columns):
+            elements.extend(self.column(c))
+        self.reinitialize(self.columns, self.rows, elements=elements)
+
+    def transpose_at_side_diagonal(self) -> None:
+        elements: MatrixElements = list()
+        for c in reversed(range(self.columns)):
+            elements.extend(reversed(self.column(c)))
+        self.reinitialize(self.columns, self.rows, elements=elements)
+
+    def transpose_at_vertical_line(self) -> None:
+        elements: MatrixElements = list()
+        for r in range(self.rows):
+            elements.extend(reversed(self.row(r)))
+        self.reinitialize(self.rows, self.columns, elements=elements)
+
+    def transpose_at_horizontal_line(self) -> None:
+        elements: MatrixElements = list()
+        for r in reversed(range(self.rows)):
+            elements.extend(self.row(r))
+        self.reinitialize(self.rows, self.columns, elements=elements)
+
+
+def make_choice(options: MenuOptions) -> Choice:
+    print(*(f"{num}. {value[0]}" for num, value in options.items()), sep='\n')
+    option: str = ''
+    while option not in options:
+        option = input("Your choice: ")
+    return options[option]
+
 
 def print_result(matrix: Matrix) -> None:
     print("The result is:", matrix, "", sep='\n')
@@ -98,7 +156,7 @@ def addition() -> None:
     # Stage #1: Addition
     matrix_a: Matrix = Matrix(alias='first')
     matrix_b: Matrix = Matrix(alias='second')
-    matrix: Optional[Matrix] = matrix_a + matrix_b
+    matrix: Matrix = matrix_a + matrix_b
     if matrix:
         print_result(matrix)
 
@@ -118,21 +176,35 @@ def matrix_by_matrix_multiplication() -> None:
     print_result(matrix_a.matrix_mul(matrix_b))
 
 
-def main() -> NoReturn:
-    menu_options: Dict[str, Tuple[str, Callable[..., Any]]] = {
+def transpose_matrix() -> None:
+    # Stage 4: Transpose
+    matrix: Matrix = Matrix(0, 0, elements=[])
+    transpose_options: MenuOptions = {
+        '1': ("Main diagonal", matrix.transpose_at_main_diagonal),
+        '2': ("Side diagonal", matrix.transpose_at_side_diagonal),
+        '3': ("Vertical line", matrix.transpose_at_vertical_line),
+        '4': ("Horizontal line", matrix.transpose_at_horizontal_line),
+    }
+    choice: Choice = make_choice(transpose_options)
+    matrix.reinitialize()
+    choice[1]()
+    print_result(matrix)
+
+
+def main() -> None:
+    menu_options: MenuOptions = {
         '1': ("Add matrices", addition),
         '2': ("Multiply matrix by a constant", multiplication_by_number),
         '3': ("Multiply matrices", matrix_by_matrix_multiplication),
+        '4': ("Transpose matrix", transpose_matrix),
         '0': ("Exit", exit),
     }
     while True:
-        print(*(f"{num}. {value[0]}" for num, value in menu_options.items()), sep='\n')
-        choice = input("Your choice: ")
-        if choice in menu_options:
-            try:
-                menu_options[choice][1]()
-            except (ValueError, NotImplementedError, TypeError):
-                print("The operation cannot be performed.\n")
+        choice: Choice = make_choice(menu_options)
+        try:
+            choice[1]()
+        except (ValueError, NotImplementedError, TypeError):
+            print("The operation cannot be performed.\n")
 
 
 if __name__ == '__main__':
