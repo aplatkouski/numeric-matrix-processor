@@ -92,6 +92,7 @@ class Matrix:
             elements: Optional[MatrixElements] = None,
             alias: Optional[str] = '',
     ) -> None:
+        # TODO: rewrite this function, because it duplicates __init__
         if rows is None or columns is None or elements is None:
             rows, columns, elements = self.read_matrix_parameters_from_input(alias)
         if len(elements) != (rows * columns):
@@ -114,6 +115,18 @@ class Matrix:
                     sum(mul(*pair) for pair in zip(self.row(r), other.column(c)))
                 )
         return Matrix(self.rows, other.columns, elements=elements)
+
+    def transpose(self, *, kind: str = "Main diagonal") -> None:
+        transpose_kinds: Dict[str, Callable[..., Any]] = {
+            "Main diagonal": self.transpose_at_main_diagonal,
+            "Side diagonal": self.transpose_at_side_diagonal,
+            "Vertical line": self.transpose_at_vertical_line,
+            "Horizontal line": self.transpose_at_horizontal_line,
+        }
+        if kind in transpose_kinds:
+            transpose_kinds[kind]()
+        else:
+            raise NotImplementedError
 
     def transpose_at_main_diagonal(self) -> None:
         elements: MatrixElements = list()
