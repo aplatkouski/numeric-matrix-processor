@@ -51,4 +51,13 @@ Write a program that does the following:
  3. Then it should read the matrix, transpose it, and output the result.
 
 
+## Stage 5: Determined! 
+
+ - [x] Youtube: [Minors and Cofactors][Matrices – Minors and Cofactors]
+
+### Objectives
+ 1. Add support calculating the determinant of a matrix.
+
+
 [Essence of linear algebra]: https://www.youtube.com/watch?v=fNk_zzaMoSs&list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab
+[Matrices – Minors and Cofactors]: https://www.youtube.com/watch?v=KMKd993vG9Q
