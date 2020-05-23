@@ -59,5 +59,20 @@ Write a program that does the following:
  1. Add support calculating the determinant of a matrix.
 
 
+## Stage 6: Inverse matrix
+
+ - [x] Youtube: [Inverse of a Matrix][]
+ - [x] Youtube: [Inverse of a 2x2 Matrix using Adjoint][]
+ - [x] Youtube: [Inverse of a 3x3 Matrix using Adjoint][]
+
+### Objectives
+ 1. Add support finding the inverse of a matrix
+ 2. Implement a method that prints a matrix in a readable way so that 
+    every column is correctly aligned and all elements are rounded 
+    to a fixed number of digits.
+
 [Essence of linear algebra]: https://www.youtube.com/watch?v=fNk_zzaMoSs&list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab
 [Matrices – Minors and Cofactors]: https://www.youtube.com/watch?v=KMKd993vG9Q
+[Inverse of a Matrix]: https://www.youtube.com/watch?v=AMLUikdDQGk
+[Inverse of a 2x2 Matrix using Adjoint]: https://www.youtube.com/watch?v=HYWeEx21WWw
+[Inverse of a 3x3 Matrix using Adjoint]: https://www.youtube.com/watch?v=xfhzwNkMNg4
