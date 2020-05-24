@@ -71,8 +71,10 @@ Write a program that does the following:
     every column is correctly aligned and all elements are rounded 
     to a fixed number of digits.
 
+
 [Essence of linear algebra]: https://www.youtube.com/watch?v=fNk_zzaMoSs&list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab
 [Matrices – Minors and Cofactors]: https://www.youtube.com/watch?v=KMKd993vG9Q
+
 [Inverse of a Matrix]: https://www.youtube.com/watch?v=AMLUikdDQGk
 [Inverse of a 2x2 Matrix using Adjoint]: https://www.youtube.com/watch?v=HYWeEx21WWw
 [Inverse of a 3x3 Matrix using Adjoint]: https://www.youtube.com/watch?v=xfhzwNkMNg4

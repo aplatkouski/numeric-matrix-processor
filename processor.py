@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 from functools import cached_property
-from math import sqrt
+from math import ceil, floor, sqrt
 from numbers import Real
-from operator import add, mul
+from operator import add, mul, sub
 from sys import exit
 from typing import Any, Callable, Dict, List, NoReturn, Optional, Tuple
 
@@ -17,7 +19,13 @@ __all__ = ['Matrix', 'Processor']
 class Matrix:
     """A class to represent a matrix as immutable object with implementation of basic operations."""
 
-    __slots__ = ['rows', 'columns', 'elements']
+    """
+    Note:
+        New in version 3.8. @functools.cached_property requires
+        that specify __slots__ with including __dict__ as one
+        of the defined slots
+    """
+    __slots__ = ['__dict__', 'rows', 'columns', 'elements']
 
     def __init__(
             self,
@@ -60,7 +68,20 @@ class Matrix:
         raise AttributeError(f"'{type(self)}' is immutable. You cannot assign to {key}")
 
     def __str__(self) -> str:
-        return '\n'.join(' '.join(map(str, self.row(r))) for r in range(self.rows))
+        elements_str: List[str] = list(map(self._round_and_str, self.elements))
+        elements_len: List[int] = list(map(len, elements_str))
+        max_len_by_each_column: List[int] = [
+            max(elements_len[c:: self.columns]) for c in range(self.columns)
+        ]
+        result: List[str] = list()
+        for r in range(self.rows):
+            result.append(
+                ' '.join(
+                    f"{elements_str[r * self.columns + c]: >{max_len_by_each_column[c]}}"
+                    for c in range(self.columns)
+                )
+            )
+        return '\n'.join(result)
 
     def __repr__(self) -> str:
         return (
@@ -71,19 +92,33 @@ class Matrix:
     def __hash__(self) -> int:
         return hash((self.rows, self.columns, self.elements))
 
-    def __add__(self, other: Any) -> 'Matrix':
-        if not isinstance(other, self.__class__):
+    def __add__(self, other: Any) -> Matrix:
+        if not isinstance(other, type(self)):
             raise NotImplementedError
         if self.rows != other.rows or self.columns != other.columns:
             raise ValueError
         elements: MatrixElements
-        elements = list(add(*pair) for pair in zip(self.elements, other.elements))
+        elements = list(
+            self.round(add(*pair)) for pair in zip(self.elements, other.elements)
+        )
         return Matrix(self.rows, self.columns, elements=elements)
 
-    def __mul__(self, other: Any) -> 'Matrix':
+    def __sub__(self, other: Any) -> Matrix:
+        if not isinstance(other, type(self)):
+            raise NotImplementedError
+        if self.rows != other.rows or self.columns != other.columns:
+            raise ValueError
+        elements: MatrixElements
+        elements = list(
+            self.round(sub(*pair)) for pair in zip(self.elements, other.elements)
+        )
+        return Matrix(self.rows, self.columns, elements=elements)
+
+    def __mul__(self, other: Any) -> Matrix:
         if isinstance(other, Real):
-            elements: MatrixElements = list(e * other for e in self.elements)
-            return Matrix(self.rows, self.columns, elements=elements)
+            return Matrix(
+                self.rows, self.columns, elements=list(e * other for e in self.elements)
+            )
         elif isinstance(other, type(self)):
             if self.columns != other.rows:
                 raise ValueError
@@ -93,11 +128,43 @@ class Matrix:
             for r in range(self.rows):
                 for c in range(other.columns):
                     elements.append(
-                        sum(mul(*pair) for pair in zip(self.row(r), other.column(c)))
+                        sum(
+                            self.round(mul(*pair))
+                            for pair in zip(self.row(r), other.column(c))
+                        )
                     )
             return Matrix(self.rows, other.columns, elements=elements)
         else:
             raise TypeError
+
+    def __truediv__(self, other: Any) -> Matrix:
+        if isinstance(other, Real):
+            return Matrix(
+                self.rows,
+                self.columns,
+                elements=list(self.round(e / other) for e in self.elements),
+            )
+        else:
+            raise NotImplementedError
+
+    @staticmethod
+    def round(x: float) -> float:
+        """Save number as `int` if fractional part is zero
+
+        Requirement of Stage 7
+        """
+        return int(x) if x % 1 < 0.000001 else x
+
+    @staticmethod
+    def _round_and_str(x: Any, scale: int = 2) -> str:
+        """Convert element in accordance with requirements of project (Stage 7)"""
+        multitude: int = 10 ** scale
+        if isinstance(x, float):
+            if x > 0:
+                return str(floor(round(x, scale + 1) * multitude) / multitude)
+            else:
+                return str(ceil(round(x, scale + 1) * multitude) / multitude)
+        return str(x)
 
     @staticmethod
     def _read_matrix_parameters_from_input(
@@ -149,8 +216,29 @@ class Matrix:
         else:
             raise IndexError
 
-    @staticmethod
-    def _determinant(*, square_matrix: MatrixElements) -> float:
+    @classmethod
+    def cofactor(cls, *, square_matrix: MatrixElements, i: int, j: int) -> float:
+        return (-1) ** (i + j) * cls._determinant(
+            square_matrix=cls._submatrix(square_matrix=square_matrix, i=i, j=j)
+        )
+
+    @cached_property
+    def inverse(self) -> Matrix:
+        if self.determinant:
+            return self.adjoint().transpose() / self.determinant
+        else:
+            raise AttributeError
+
+    def adjoint(self) -> Matrix:
+        elements: MatrixElements = list(
+            self.cofactor(square_matrix=self.elements, i=r, j=c)
+            for r in range(self.rows)
+            for c in range(self.columns)
+        )
+        return Matrix(self.rows, self.columns, elements=elements)
+
+    @classmethod
+    def _determinant(cls, *, square_matrix: MatrixElements) -> float:
         """Return determinant that computed from a square matrix using the Laplace expansion.
 
         Args:
@@ -163,15 +251,8 @@ class Matrix:
         """
         size: int = int(sqrt(len(square_matrix)))
         if size != 2:
-            # compute sum of (i, j) minors (first minors)
             return sum(
-                Matrix._determinant(
-                    square_matrix=Matrix._submatrix(
-                        square_matrix=square_matrix, i=0, j=j
-                    )
-                )
-                * (-1) ** j
-                * square_matrix[j]
+                cls.cofactor(square_matrix=square_matrix, i=0, j=j) * square_matrix[j]
                 for j in range(size)
                 # skip `zero` elements
                 if square_matrix[j]
@@ -237,37 +318,37 @@ class Matrix:
         else:
             raise IndexError
 
-    def transpose(self, *, kind: str = "main diagonal") -> 'Matrix':
-        transpose_kinds: Dict[str, Callable[..., 'Matrix']] = {
+    def transpose(self, *, kind: str = "main diagonal") -> Matrix:
+        transpose_kinds: Dict[str, Callable[..., Matrix]] = {
             "main diagonal": self.transpose_at_main_diagonal,
             "side diagonal": self.transpose_at_side_diagonal,
             "vertical line": self.transpose_at_vertical_line,
             "horizontal line": self.transpose_at_horizontal_line,
         }
-        if kind.lower() in transpose_kinds:
+        if kind in transpose_kinds:
             return transpose_kinds[kind]()
         else:
             raise NotImplementedError
 
-    def transpose_at_main_diagonal(self) -> 'Matrix':
+    def transpose_at_main_diagonal(self) -> Matrix:
         elements: MatrixElements = list()
         for c in range(self.columns):
             elements.extend(self.column(c))
         return Matrix(self.columns, self.rows, elements=elements)
 
-    def transpose_at_side_diagonal(self) -> 'Matrix':
+    def transpose_at_side_diagonal(self) -> Matrix:
         elements: MatrixElements = list()
         for c in reversed(range(self.columns)):
             elements.extend(reversed(self.column(c)))
         return Matrix(self.columns, self.rows, elements=elements)
 
-    def transpose_at_vertical_line(self) -> 'Matrix':
+    def transpose_at_vertical_line(self) -> Matrix:
         elements: MatrixElements = list()
         for r in range(self.rows):
             elements.extend(reversed(self.row(r)))
         return Matrix(self.rows, self.columns, elements=elements)
 
-    def transpose_at_horizontal_line(self) -> 'Matrix':
+    def transpose_at_horizontal_line(self) -> Matrix:
         elements: MatrixElements = list()
         for r in reversed(range(self.rows)):
             elements.extend(self.row(r))
@@ -282,6 +363,7 @@ class Processor:
             '3': ("Multiply matrices", self._matrix_by_matrix_multiplication),
             '4': ("Transpose matrix", self._transpose_matrix),
             '5': ("Calculate a determinant", self._calculate_determinant),
+            '6': ("Inverse matrix", self._inverse_matrix),
             '0': ("Exit", exit),
         }
 
@@ -336,7 +418,7 @@ class Processor:
         option: str = ''
         while option not in transpose_options:
             option = input("Your choice: ")
-        matrix: Matrix = Matrix().transpose(kind=transpose_options[option])
+        matrix: Matrix = Matrix().transpose(kind=transpose_options[option].lower())
         self._print_result(matrix)
 
     def _calculate_determinant(self) -> None:
@@ -344,12 +426,18 @@ class Processor:
         matrix: Matrix = Matrix()
         self._print_result(matrix.determinant)
 
+    def _inverse_matrix(self) -> None:
+        # Stage 6: Inverse matrix
+        matrix: Matrix = Matrix()
+        self._print_result(matrix.inverse)
+
     def cli(self) -> None:
         while True:
             choice: Choice = self._make_choice(self.menu_options)
             try:
                 choice[1]()
             except (
+                    AttributeError,
                     IndexError,
                     NotImplementedError,
                     TypeError,
