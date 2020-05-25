@@ -25,43 +25,49 @@ class Matrix:
         that specify __slots__ with including __dict__ as one
         of the defined slots
     """
-    __slots__ = ['__dict__', 'rows', 'columns', 'elements']
+    __slots__ = ['__dict__', 'row_count', 'column_count', 'elements']
 
     def __init__(
             self,
-            __rows: Optional[int] = None,
-            __columns: Optional[int] = None,
+            __row_count: Optional[int] = None,
+            __column_count: Optional[int] = None,
             *,
             elements: Optional[MatrixElements] = None,
             alias: Optional[str] = '',
     ) -> None:
         """The constructor for Matrix class.
 
-        If at least one variable from `__rows`, `__columns` or `elements`
-        is missing, CLI will be launched to get all parameters from user.
+        If at least one variable from `__row_count`, `__column_count`
+        or `elements` is missing, CLI will be launched to get
+        all parameters from user.
 
         Args:
-            __rows: number of rows.
-            __columns: number of columns.
+            __row_count: number of rows.
+            __column_count: number of columns.
             elements: elements of matrix as a list of numbers.
             alias: matrix alias used on CLI when getting other matrix
                 parameters from user.
 
         Raises:
             ValueError: if number of elements calculated as
-                a multiplication `__rows` and `__columns` is not equal
-                to the number of elements in the variable `elements`.
+                a multiplication `__row_count` and `__column_count` is
+                not equal to the number of elements in the variable
+                `elements`.
 
         """
-        if __rows is None or __columns is None or elements is None:
-            __rows, __columns, elements = self._read_matrix_parameters_from_input(alias)
-        if len(elements) != (__rows * __columns):
+        if __row_count is None or __column_count is None or elements is None:
+            (
+                __row_count,
+                __column_count,
+                elements,
+            ) = self._read_matrix_parameters_from_input(alias)
+        if len(elements) != (__row_count * __column_count):
             raise ValueError
-        self.rows: int
-        self.columns: int
+        self.row_count: int
+        self.column_count: int
         self.elements: MatrixElements
-        super(Matrix, self).__setattr__('rows', __rows)
-        super(Matrix, self).__setattr__('columns', __columns)
+        super(Matrix, self).__setattr__('row_count', __row_count)
+        super(Matrix, self).__setattr__('column_count', __column_count)
         super(Matrix, self).__setattr__('elements', elements)
 
     def __setattr__(self, key: str, value: Any) -> NoReturn:
@@ -70,78 +76,80 @@ class Matrix:
     def __str__(self) -> str:
         elements_str: List[str] = list(map(self._round_and_str, self.elements))
         elements_len: List[int] = list(map(len, elements_str))
-        max_len_by_each_column: List[int] = [
-            max(elements_len[c:: self.columns]) for c in range(self.columns)
+        max_len_by_column: List[int] = [
+            max(elements_len[c:: self.column_count]) for c in range(self.column_count)
         ]
         result: List[str] = list()
-        for r in range(self.rows):
+        for r in range(self.row_count):
             result.append(
                 ' '.join(
-                    f"{elements_str[r * self.columns + c]: >{max_len_by_each_column[c]}}"
-                    for c in range(self.columns)
+                    f"{elements_str[r * self.column_count + c]: >{max_len_by_column[c]}}"
+                    for c in range(self.column_count)
                 )
             )
         return '\n'.join(result)
 
     def __repr__(self) -> str:
         return (
-            f"Matrix (rows='{self.rows}', columns='{self.columns}', "
+            f"Matrix (row_count='{self.row_count}', column_count='{self.column_count}', "
             f"elements='{self.elements}')"
         )
 
     def __hash__(self) -> int:
-        return hash((self.rows, self.columns, self.elements))
+        return hash((self.row_count, self.column_count, self.elements))
 
     def __add__(self, other: Any) -> Matrix:
         if not isinstance(other, type(self)):
             raise NotImplementedError
-        if self.rows != other.rows or self.columns != other.columns:
+        if self.row_count != other.row_count or self.column_count != other.column_count:
             raise ValueError
         elements: MatrixElements
         elements = list(
             self.round(add(*pair)) for pair in zip(self.elements, other.elements)
         )
-        return Matrix(self.rows, self.columns, elements=elements)
+        return Matrix(self.row_count, self.column_count, elements=elements)
 
     def __sub__(self, other: Any) -> Matrix:
         if not isinstance(other, type(self)):
             raise NotImplementedError
-        if self.rows != other.rows or self.columns != other.columns:
+        if self.row_count != other.row_count or self.column_count != other.column_count:
             raise ValueError
         elements: MatrixElements
         elements = list(
             self.round(sub(*pair)) for pair in zip(self.elements, other.elements)
         )
-        return Matrix(self.rows, self.columns, elements=elements)
+        return Matrix(self.row_count, self.column_count, elements=elements)
 
     def __mul__(self, other: Any) -> Matrix:
         if isinstance(other, Real):
             return Matrix(
-                self.rows, self.columns, elements=list(e * other for e in self.elements)
+                self.row_count,
+                self.column_count,
+                elements=list(e * other for e in self.elements),
             )
         elif isinstance(other, type(self)):
-            if self.columns != other.rows:
+            if self.column_count != other.row_count:
                 raise ValueError
             elements = list()
             self_row: MatrixElements
             other_column: MatrixElements
-            for r in range(self.rows):
-                for c in range(other.columns):
+            for r in range(self.row_count):
+                for c in range(other.column_count):
                     elements.append(
                         sum(
                             self.round(mul(*pair))
                             for pair in zip(self.row(r), other.column(c))
                         )
                     )
-            return Matrix(self.rows, other.columns, elements=elements)
+            return Matrix(self.row_count, other.column_count, elements=elements)
         else:
             raise TypeError
 
     def __truediv__(self, other: Any) -> Matrix:
         if isinstance(other, Real):
             return Matrix(
-                self.rows,
-                self.columns,
+                self.row_count,
+                self.column_count,
                 elements=list(self.round(e / other) for e in self.elements),
             )
         else:
@@ -173,16 +181,16 @@ class Matrix:
         print(
             "Enter size of", f" {alias} " if alias else " ", "matrix:", sep='', end=' '
         )
-        rows, columns = map(int, input().split(' ', 1))
+        row_count, column_count = map(int, input().split(' ', 1))
         elements: MatrixElements = list()
         row: MatrixElements
         print("Enter", f" {alias} " if alias else " ", "matrix:", sep='')
-        for _ in range(rows):
+        for _ in range(row_count):
             row = [float(x) if '.' in x else int(x) for x in input().split()]
-            if len(row) != columns:
+            if len(row) != column_count:
                 raise ValueError
             elements.extend(row)
-        return rows, columns, elements
+        return row_count, column_count, elements
 
     @staticmethod
     def _submatrix(*, square_matrix: MatrixElements, i: int, j: int) -> MatrixElements:
@@ -232,10 +240,10 @@ class Matrix:
     def adjoint(self) -> Matrix:
         elements: MatrixElements = list(
             self.cofactor(square_matrix=self.elements, i=r, j=c)
-            for r in range(self.rows)
-            for c in range(self.columns)
+            for r in range(self.row_count)
+            for c in range(self.column_count)
         )
-        return Matrix(self.rows, self.columns, elements=elements)
+        return Matrix(self.row_count, self.column_count, elements=elements)
 
     @classmethod
     def _determinant(cls, *, square_matrix: MatrixElements) -> float:
@@ -266,18 +274,18 @@ class Matrix:
     @cached_property
     def dimensions(self) -> Tuple[int, int]:
         """Return dimensions of matrix as tuple of number of rows and number of columns"""
-        return self.rows, self.columns
+        return self.row_count, self.column_count
 
     @cached_property
     def determinant(self) -> float:
         """Return determinant (scalar value) of matrix"""
-        if self.elements and self.rows == self.columns:
+        if self.elements and self.row_count == self.column_count:
             if len(self.elements) == 1:
                 return self.elements[0]
             return self._determinant(square_matrix=self.elements)
         else:
             raise AttributeError(
-                f"Matrix({self.rows}, {self.columns}) has no attribute 'determinant'"
+                f"Matrix({self.row_count}, {self.column_count}) has no attribute 'determinant'"
             )
 
     def row(self, n: int = 0) -> MatrixElements:
@@ -294,8 +302,10 @@ class Matrix:
                 number of rows.
 
         """
-        if 0 <= n < self.rows:
-            return self.elements[n * self.columns: n * self.columns + self.columns:]
+        if 0 <= n < self.row_count:
+            return self.elements[
+                   n * self.column_count: n * self.column_count + self.column_count:
+                   ]
         else:
             raise IndexError
 
@@ -313,8 +323,8 @@ class Matrix:
                 number of columns.
 
         """
-        if 0 <= n < self.columns:
-            return self.elements[n:: self.columns]
+        if 0 <= n < self.column_count:
+            return self.elements[n:: self.column_count]
         else:
             raise IndexError
 
@@ -332,27 +342,27 @@ class Matrix:
 
     def transpose_at_main_diagonal(self) -> Matrix:
         elements: MatrixElements = list()
-        for c in range(self.columns):
+        for c in range(self.column_count):
             elements.extend(self.column(c))
-        return Matrix(self.columns, self.rows, elements=elements)
+        return Matrix(self.column_count, self.row_count, elements=elements)
 
     def transpose_at_side_diagonal(self) -> Matrix:
         elements: MatrixElements = list()
-        for c in reversed(range(self.columns)):
+        for c in reversed(range(self.column_count)):
             elements.extend(reversed(self.column(c)))
-        return Matrix(self.columns, self.rows, elements=elements)
+        return Matrix(self.column_count, self.row_count, elements=elements)
 
     def transpose_at_vertical_line(self) -> Matrix:
         elements: MatrixElements = list()
-        for r in range(self.rows):
+        for r in range(self.row_count):
             elements.extend(reversed(self.row(r)))
-        return Matrix(self.rows, self.columns, elements=elements)
+        return Matrix(self.row_count, self.column_count, elements=elements)
 
     def transpose_at_horizontal_line(self) -> Matrix:
         elements: MatrixElements = list()
-        for r in reversed(range(self.rows)):
+        for r in reversed(range(self.row_count)):
             elements.extend(self.row(r))
-        return Matrix(self.rows, self.columns, elements=elements)
+        return Matrix(self.row_count, self.column_count, elements=elements)
 
 
 class Processor:
