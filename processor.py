@@ -143,17 +143,16 @@ class Matrix:
                     )
             return Matrix(self.row_count, other.column_count, elements=elements)
         else:
-            raise TypeError
+            raise NotImplementedError
 
     def __truediv__(self, other: Any) -> Matrix:
-        if isinstance(other, Real):
-            return Matrix(
-                self.row_count,
-                self.column_count,
-                elements=list(self.round(e / other) for e in self.elements),
-            )
-        else:
+        if not isinstance(other, Real):
             raise NotImplementedError
+        return Matrix(
+            self.row_count,
+            self.column_count,
+            elements=list(self.round(e / other) for e in self.elements),
+        )
 
     @staticmethod
     def round(x: float) -> float:
@@ -199,10 +198,12 @@ class Matrix:
         Note:
             All arguments are keyword-only arguments.
 
+            `i` and `j` are 0-based indexes that less than `size` of matrix
+
         Args:
             square_matrix: square matrix as a list of numbers.
-            i: row number from 0 to `size` - 1.
-            j: column number from 0 to `size` - 1.
+            i: row number.
+            j: column number.
 
         Returns:
             The square submatrix as a list of numbers.
