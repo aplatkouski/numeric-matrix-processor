@@ -17,9 +17,18 @@ __all__ = ['Matrix', 'Processor']
 
 
 class Matrix:
-    """A class to represent a matrix as immutable object with implementation of basic operations."""
+    """A class to represent a matrix as immutable object with implementation of basic operations.
 
-    """
+    Todo:
+        * BUG: __hash__ return the same result for different objects
+          with the same parameters. Move initialization in __new__,
+          make instances unique.
+        * BUG: __row_count, __column_count should be positional_only_parameters
+          see PEP-457 and PEP 570 for solution. Now, it only possible to get
+          access to these parameters inside __init__ using
+          _Matrix__row_count and _Matrix__column_count.
+        * Add iterators rows and columns (for using in transpose)
+    
     Note:
         New in version 3.8. @functools.cached_property requires
         that specify __slots__ with including __dict__ as one
@@ -76,14 +85,14 @@ class Matrix:
     def __str__(self) -> str:
         elements_str: List[str] = list(map(self._round_and_str, self.elements))
         elements_len: List[int] = list(map(len, elements_str))
-        max_len_by_column: List[int] = [
+        columns_width: List[int] = [
             max(elements_len[c:: self.column_count]) for c in range(self.column_count)
         ]
         result: List[str] = list()
         for r in range(self.row_count):
             result.append(
                 ' '.join(
-                    f"{elements_str[r * self.column_count + c]: >{max_len_by_column[c]}}"
+                    f"{elements_str[r * self.column_count + c]: >{columns_width[c]}}"
                     for c in range(self.column_count)
                 )
             )
@@ -250,6 +259,8 @@ class Matrix:
     def _determinant(cls, *, square_matrix: MatrixElements) -> float:
         """Return determinant that computed from a square matrix using the Laplace expansion.
 
+        Todo:
+            * BUG: if matrix(1, 1)
         Args:
             square_matrix: square matrix as a list of numbers.
                 It's keyword-only argument.
