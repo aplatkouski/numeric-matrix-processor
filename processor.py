@@ -34,15 +34,16 @@ class Matrix:
         that specify __slots__ with including __dict__ as one
         of the defined slots
     """
+
     __slots__ = ['__dict__', 'row_count', 'column_count', 'elements']
 
     def __init__(
-            self,
-            __row_count: Optional[int] = None,
-            __column_count: Optional[int] = None,
-            *,
-            elements: Optional[MatrixElements] = None,
-            alias: Optional[str] = '',
+        self,
+        __row_count: Optional[int] = None,
+        __column_count: Optional[int] = None,
+        *,
+        elements: Optional[MatrixElements] = None,
+        alias: Optional[str] = '',
     ) -> None:
         """The constructor for Matrix class.
 
@@ -86,7 +87,7 @@ class Matrix:
         elements_str: List[str] = list(map(self._round_and_str, self.elements))
         elements_len: List[int] = list(map(len, elements_str))
         columns_width: List[int] = [
-            max(elements_len[c:: self.column_count]) for c in range(self.column_count)
+            max(elements_len[c :: self.column_count]) for c in range(self.column_count)
         ]
         result: List[str] = list()
         for r in range(self.row_count):
@@ -100,8 +101,9 @@ class Matrix:
 
     def __repr__(self) -> str:
         return (
-            f"Matrix (row_count='{self.row_count}', column_count='{self.column_count}', "
-            f"elements='{self.elements}')"
+            f"{self.__class__.__name__}(row_count='{self.row_count}'"
+            f", column_count='{self.column_count}'"
+            f", elements='{self.elements}')"
         )
 
     def __hash__(self) -> int:
@@ -184,7 +186,7 @@ class Matrix:
 
     @staticmethod
     def _read_matrix_parameters_from_input(
-            alias: Optional[str] = '',
+        alias: Optional[str] = '',
     ) -> MatrixParameters:
         print(
             "Enter size of", f" {alias} " if alias else " ", "matrix:", sep='', end=' '
@@ -227,9 +229,9 @@ class Matrix:
             elements: MatrixElements = list()
             for r in range(size):
                 if r != i:
-                    row = square_matrix[r * size: r * size + size:]
+                    row = square_matrix[r * size : r * size + size :]
                     # skip element in `j` column
-                    elements.extend(row[:j] + row[j + 1:])
+                    elements.extend(row[:j] + row[j + 1 :])
             return elements
         else:
             raise IndexError
@@ -279,8 +281,8 @@ class Matrix:
             )
         else:
             return (
-                    square_matrix[0] * square_matrix[3]
-                    - square_matrix[1] * square_matrix[2]
+                square_matrix[0] * square_matrix[3]
+                - square_matrix[1] * square_matrix[2]
             )
 
     @cached_property
@@ -316,8 +318,8 @@ class Matrix:
         """
         if 0 <= n < self.row_count:
             return self.elements[
-                   n * self.column_count: n * self.column_count + self.column_count:
-                   ]
+                n * self.column_count : n * self.column_count + self.column_count :
+            ]
         else:
             raise IndexError
 
@@ -336,7 +338,7 @@ class Matrix:
 
         """
         if 0 <= n < self.column_count:
-            return self.elements[n:: self.column_count]
+            return self.elements[n :: self.column_count]
         else:
             raise IndexError
 
@@ -459,11 +461,11 @@ class Processor:
             try:
                 choice[1]()
             except (
-                    AttributeError,
-                    IndexError,
-                    NotImplementedError,
-                    TypeError,
-                    ValueError,
+                AttributeError,
+                IndexError,
+                NotImplementedError,
+                TypeError,
+                ValueError,
             ):
                 print("The operation cannot be performed.\n")
 
